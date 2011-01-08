@@ -1,0 +1,58 @@
+---
+layout=post
+title: Liferay Friendly Vaadin Themes using the Chameleon Theme
+---
+
+Recently I've been faced with the prospect of deploying "Vaadin":http://vaadin.com servlets to the Liferay portal platform.  Vaadin has great support for Liferay, but we experienced just enough difficulty (mostly due to our inexperience with these two platforms) to warrant documenting the solution.
+
+Part of the source of our troubles came from the need for a Liferay page to contain the Vaadin app and nothing else. (No navigation bar, no header, no breadcrumbs, etc).  Our Vaadin application has a lot of layout going on in it, because it is designed to stand alone practically as its own web page.  The first run through, we used the Liferay page's Look and Feel configuration to add some css overrides to turn off the normal Liferay elements.  It worked, but there are lessons learned:
+
+# The Vaadin theme loads after the Liferay theme has loaded, but before the page's private CSS overrides
+# The CSS overrides affect the page's control elements (Like all the forms used to set look and feel)
+# When approaching the CSS from this position, we found it quite tricky to target elements deeply buried within the Vaadin portlet.
+
+We found it advantageous to avoid using the CSS override for the page itself, and instead develop a Liferay theme specifically for this situation.  This is quite easy, and you can see how we did it "here":https://github.com/kastork/PlainPage-theme.  But doing so pointed out fact (1) above.  For the most part, a normal Liferay theme doesn't touch the internal styling of a Vaadin portlet.
+
+We tried many combinations of the normal themes that come with Vaadin (Reindeer, Runo, and even the so-called Liferay theme).  The results were not to our liking (the portlet still looked different when deployed to a normal Tomcat container than it did  when deployed to Liferay) and we spent rather a lot of time trying to tweak these themes via css, again using the Liferay page's CSS overrides.
+
+h4. Enter the Chameleon Theme for Vaadin
+
+The "Chameleon Theme":http://demo.vaadin.com/chameleontheme is a very polished and flexible Vaadin theme that comes with customization tools for choosing color schemes.  You use the web-based tool until you are satisfied, and then download your customized theme as a jar file.  Similar to the approach taken for Liferay themes, Chameleon has a base jar file, and then a much smaller css file that contains the customizations.  This one relatively small css file can then be further fine tuned by hand.  Also, Chameleon has a well documented set of style name applications that can be utilized from within your java code when building the internal layout of the Vaadin app.
+
+So our solution is to use our "PlainPage-theme":https://github.com/kastork/PlainPage-theme applied to the specific Liferay page of interest, and to theme the Vaadin app using Chameleon with a transparent background.  We turn off all the Liferay chrome by turning off the portlet borders in the Look and Feel controller on the portlet page.  (This has implications for which styles get applied from the Chameleon theme, and is the main reason we forced a transparent background for the portlet.)
+
+Though we don't yet have a need for it, it looks to us like the Chameleon theme will also ease the path to creating Vaadin apps that need to coexist on the page with non-Vaadin apps on pages that have a real Liferay theme applied to them.
+
+h4. Organizing the Portlet Project with the custom theme
+
+Because we wanted to tweak the Chameleon theme, we unpacked the jar file that you get from the Chameleon web tool, and treated the style.css as our own custom theme.  The unarchived files wind up being positioned as illustrated here in the context of a Maven-based project's src directory.  If you didn't need to customize, then the single jar from the download would replace vaadin-chameleon-theme-1.0.1.jar in the figure below.
+
+<pre name="code" class="bash">
+src
+   main
+      java
+      resources
+      webapp
+         META-INF
+         VAADIN
+            themes
+               chameleon-transparent-grey
+                  style.css
+                  ...
+            widgetsets
+               ...
+         WEB-INF
+            lib
+               vaadin-chameleon-theme-1.0.1.jar
+   test
+      ...
+</pre>
+
+Finally, in your Vaadin Application subclass, call @setTheme("chameleon-transparent-grey")@ when you start buidling the view.  Take charge then of individual layout components by calling, e.g.:
+
+<pre name="code" class="java">
+  Panel p = new Panel("My Panel");
+  p.setStyleName("borderless bubble");
+</pre>
+
+It is also possible to use constants defined in the theme, but not all options are available as pre-defined constants.  The Chameleon theme building tool has mouse-over tips on each example that tell you what style to set for the particular widget.  Very nice.
