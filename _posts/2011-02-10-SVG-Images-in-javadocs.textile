@@ -1,0 +1,133 @@
+---
+layout: post
+title: Adding SVG Images to Javadocs in a Maven Project
+---
+
+I've been working on a project in which many java classes are crying out for graphical content in their documentation.  In particular, many can be usefully represented as directed graphs.  For these classes, it is nice to include the graphical representation right in the javadocs for the library in question.  This post describes a way to achieve this using  a combination of the open source [graphviz | http://www.graphviz.org/] package, conventional placement of files in a Maven project, and a custom Eclipse action.  Some of what's here is specific to generating the graphics, but if you have graphics files produced some other way, there may be some helpful info here as well.
+
+h4. Maven conventions
+
+Maven projects benefit from the so-called convention-over-configuration paradigm.  Rather than creating a bunch of xml configuration files, you simply put things in the conventional place and, poof, they are configured.  It so happens, the javadoc processor also has some conventions, namely, the doc-files directory.
+
+In a non-maven project, you might place a doc-files directory right in your source tree.  In fact, that's where the javadoc tool will look for it if invoked as a stand-alone tool.  But when the Maven javadoc plugin invokes javadoc, it expects such things to reside in the javadoc tree.  The javadoc tree of a Maven project mirrors the source tree, package-wise, and is also where you put your package.html files, for example.  So if you have:
+
+<pre name="code" class="bash">
+- Project
+  - src
+    - main
+      -java
+        - com
+          - example
+            - package
+</code></pre>
+
+
+Then the corresponding doc-files directory would be at
+
+<pre name="code" class="bash">
+- Project
+  - src
+    - main
+      -javadoc
+        - com
+          - example
+            - package
+               - doc-files
+</code></pre>
+
+h5. Javadoc Conventions
+
+The doc-files directory is a place to put things that can be linked concisely in javadoc comments.  In the case of image files, those links end up rendered in the resulting HTML.  Here's an example of a javadoc comment that links an svg graphics file:
+
+<pre name="code" class="java">
+/**
+ * blah blah blah
+ * 
+ * <div><object id="erg" data="doc-files/my_graph.dot.svg" 
+ * type="image/svg+xml" width="700" height="400">
+ * </object></div>
+ */
+</code></pre>
+
+That shortcut makes an assumption about the package coordinates of the class in which the javadoc appears.  Also, that link can be any kind of HTML link; so you could link a png file with an img tag, for example.
+
+h5. SVG and the Graphviz package.
+
+My goal was to render graphs in javadocs in such a way that the user could "zoom in" and actually read the textual annotations contained in the graph.  A static png or jpeg file won't work, because some of the graphs can be quite large, and you don't want to send the user a 4800x4800px image.  Scalable Vector Graphics to the rescue!
+
+The graphviz package allows you to specify a visual graph representation in an easy to edit, readable format.  Here's an example:
+
+<pre name="code">
+digraph mission_commander {
+layout = "dot"
+rankdir = LR;
+size = 7;
+  graph [ fontname = "Verdana", fontsize = 10, label = "Mission Commander ERG" ];
+  node [shape = circle, fixedsize=true, width=1.1, fontname = "Verdana", fontsize = 10];
+  edge [fontsize = 10, labelfontsize = 10, labelfontname = "Courier", fontname="Arial"]
+  
+  Activate -> "Assign\nPlan" [
+    taillabel = "0",
+    label = "(asset available\n & mission available)",
+    decorate = "false"
+  ];
+  
+  Ready -> "Asset\nAvailable" [
+    taillabel = "0",
+    label = "[Asset]",
+    decorate = "false"
+  ];
+  
+  Return -> "Mission\nAvailable" [
+    taillabel = "0",
+    label = "[Asset]",
+    decorate = "false"
+  ];
+  
+  "Assign\nPlan" -> "Assign\nPlan" [
+    taillabel = "0",
+    label = "(asset available \n& mission available)",
+    decorate = "false",
+    len = 2
+  ];
+  
+  "Mission\nAvailable" -> "Assign\nPlan" [
+    taillabel = "0",
+    label = "(asset available)",
+    decorate = "true"
+  ];
+  
+  "Asset\nAvailable" -> "Assign\nPlan" [
+    taillabel = "0",
+    label = "(mission available)",
+    decorate = "false"
+  ];
+  
+  "Assign\nPlan" -> "Start\nDeployment" [
+    taillabel = "0",
+    label = "[Asset, Plan]",
+    decorate = "false"
+  ];
+  
+}
+</code></pre>
+
+That ".dot" file is like source code, and must be processed to produce a renderable image.  On my Mac, the graphviz system was installed using macports, so everything is rooted in /opt.  The image compilation is easily done on the command line:
+
+<pre name="code" class="bash">
+kirk$: cd Project/src/main/javadoc/com/example/package/doc-files
+kirk$: /opt/local/bin/dot -Tsvg -omy_graph.dot.svg my_graph.dot
+</code></pre>
+
+Then, the resulting svg file will be rendered into the javadocs when you build them.  The below is a static screen capture, but if you were to view the actual javadoc page, you would see that you can zoom in and out on the illustration and the text scales in a legible way.  Imagine a graph with dozens of nodes, where by default the nodes are only 1/4" in diameter; those labels would not be legible, so the ability to zoom in and read the text is critical.
+
+
+!/images/fig-2011-02-10-2.png!
+
+
+h5. A custom Eclipse Action
+
+I wanted a way to stay in my IDE and get the same results.  In Eclipse, this is pretty easy using the External Tools Configuration mechanism.  I won't walk you through the steps of creating a custom External Tools Action, but here's a screen cap of the setup I use.  With this in place, you simply select the dot file and execute the external tools action.
+
+!/images/fig-2011-02-10-1.png!
+
