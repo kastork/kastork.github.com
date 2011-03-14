@@ -2,7 +2,16 @@
 layout: default
 title: Kirk's Blog
 ---
+{% for post in site.posts limit:5 %}
+<div class="post">
+    <h1><a href="{{ post.url }}">{{ post.title }}</a></h1> 
+    <span class="date">{{ post.date | date: "%b %d %Y" }}</span><br />
+    {{ post.content }}
+    <p class="signoff"> 
+      To view or add comments, please see the <a href="{{ post.url }}">full post</a>.
+    </p>
+  </div>
+{% endfor %}
 
-h1. Text...
 
-And text
+{% include scripts.html %}
