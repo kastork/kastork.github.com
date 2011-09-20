@@ -1,0 +1,18 @@
+---
+layout: post
+title: Outdated Java3D in OSX Lion
+---
+
+On Snow Leopard, the java distribution contained an out of date set of libraries for the Java3D package.  It appears that the so-called final Apple release of Java for Lion has the same problem.  This is an issue because the resources are placed in the Java Extensions path, so they override duplicates that you might put into your classpath.
+
+So far, I haven't found anything on my system that needs these outdated resources.  Since all the programs and projects I've encountered that requre j3d or vecmath.jar seem to either contain the jars they need or declare a Maven or Ivy dependency on a specific version, the Apple-provided libraries just get in the way.
+
+So I believe it is entirely safe to remove these files (please let me know if you have found a reason it is not safe).
+
+* @/System/Library/Java/Extensions/j3daudio.jar@
+* @/System/Library/Java/Extensions/j3dcore.jar@
+* @/System/Library/Java/Extensions/j3dutils.jar@
+* @/System/Library/Java/Extensions/libj3D.jnilib@
+* @/System/Library/Java/Extensions/libj3DAudio.jnilib@
+* @/System/Library/Java/Extensions/libj3DUtils.jnilib@
+* @/System/Library/Java/Extensions/vecmath.jar@
